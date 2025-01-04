@@ -39,3 +39,7 @@
 
 # Video files
 *.mp4
+
+tutorial/
+
+*.pdf
