@@ -10,71 +10,49 @@
 using namespace std;
 const int MOD = 1e9 + 7;
 
-struct custom_hash
-{
-    size_t operator()(const pair<int, int> &p) const
-    {
-        static const uint64_t FIXED_RANDOM = chrono::steady_clock::now().time_since_epoch().count();
-        size_t hash1 = hash<int>{}(p.first);
-        size_t hash2 = hash<int>{}(p.second);
-        return hash1 ^ (hash2 + 0x9e3779b9 + (hash1 << 6) + (hash1 >> 2) + FIXED_RANDOM);
-    }
-};
-unordered_map<pair<int, int>, bool, custom_hash> VALID_COL({{{0, 3}, true}, {{1, 0}, true}, {{1, 1}, true}, {{1, 2}, true}, {{2, 0}, true}, {{2, 1}, true}, {{2, 2}, true}, {{3, 0}, true}, {{3, 1}, true}, {{3, 2}, true}});
-
 void solve()
 {
     int n, m;
     cin >> n >> m;
-    vector<vector<int>> dp(m + 1, vector<int>((1 << (2 * n)) + 1, 0));
+    vector<vector<int>> dp(m + 1, vector<int>(1 << n, 0));
 
-    auto isValidCol = [&](int prev, int cur)
+    function<void(int, int, int, int)> generate = [&](int cur_mask, int new_mask, int i, int col)
     {
-        return VALID_COL[{prev, cur}];
+        if (i == n)
+        {
+            dp[col + 1][new_mask] = (dp[col][cur_mask] + dp[col + 1][new_mask]) % MOD;
+            return;
+        }
+        if ((cur_mask >> i) & 1)
+            generate(cur_mask, new_mask, i + 1, col);
+        else
+        {
+            generate(cur_mask, new_mask | (1 << i), i + 1, col);
+            if (i + 1 < n && !((cur_mask >> (i + 1)) & 1))
+                generate(cur_mask, new_mask, i + 2, col);
+        }
     };
 
-    auto isValidRow = [&](int prev, int cur)
+    auto print_mask = [&](int mask, int n)
     {
-        return (make_pair(prev, cur) != make_pair(0LL, 2LL)) && (make_pair(prev, cur) != make_pair(1LL, 0LL));
+        for (int i = 0; i < n; i++)
+        {
+            cout << ((mask >> i) & 1);
+        }
+        cout << endl;
     };
 
-    auto isValidFirstCol = [&](int cur)
-    {
-        return cur != 2;
-    };
-
-    auto isValidLastCol = [&](int cur)
-    {
-        return cur != 1;
-    };
-
-    auto isValidFirstRow = [&](int cur)
-    {
-        return cur != 0;
-    };
-    auto isValidLastRow = [&](int cur)
-    {
-        return cur != 3;
-    };
-
-    vector<unordered_map<string, int>> dp(m + 1);
+    dp[0][0] = 1;
     for (int i = 0; i < m; i++)
     {
-        for (int j = 0; j < n; j++)
+        for (int mask = 0; mask < (1 << n); mask++)
         {
-            for (int k = 0; k < 4; k++)
-            {
-                if (i == 0 && !isValidFirstRow(k))
-                    continue;
-                if (j == 0 && !isValidFirstCol(k))
-                    continue;
-                if (i == m - 1 && !isValidLastRow(k))
-                    continue;
-                if (j == n - 1 && !isValidLastCol(k))
-                    continue;
-            }
+            if (dp[i][mask] == 0)
+                continue;
+            generate(mask, 0, 0, i);
         }
     }
+    cout << dp[m][0] << endl;
 }
 int32_t main()
 {
